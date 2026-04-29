@@ -21,7 +21,7 @@ class ScheduleService
         return ScheduleGroup::with('activity:id,name')
             ->when($validatedData['search'] ?? null, function ($query) use ($validatedData) {
                 $query->whereHas('activity', function ($q) use ($validatedData) {
-                    $q->where('name', 'like', '%'.$validatedData['search'].'%');
+                    $q->where('name', 'like', '%' . $validatedData['search'] . '%');
                 });
             })
             ->orderByDesc('id')
@@ -149,6 +149,52 @@ class ScheduleService
         ];
     }
 
+    public function export(string $id): array
+    {
+        $scheduleGroup = ScheduleGroup::with('activity:id,name')
+            ->findOrFail($id, ['id', 'activity_id', 'start_date', 'end_date']);
+
+        $schedules = Schedule::where('schedule_group_id', $id)
+            ->with('congregants:id,full_name')
+            ->orderBy('scheduled_date')
+            ->get(['id', 'service_type_id', 'scheduled_date']);
+
+        $availableServiceTypesIds = $schedules->pluck('service_type_id')->unique();
+        $availableServiceTypes = ServiceType::whereIntegerInRaw('id', $availableServiceTypesIds)
+            ->get(['id', 'name'])
+            ->keyBy('id');
+
+        $schedules = $schedules->groupBy(['scheduled_date', 'service_type_id']);
+
+        $csvHeaders = ['Date'];
+        foreach ($availableServiceTypes as $serviceType) {
+            $csvHeaders[] = $serviceType->name;
+        }
+
+        $rows = [];
+        foreach ($schedules as $date => $scheduleByServiceType) {
+            $row = [Carbon::parse($date)->format('Y-m-d')];
+            foreach ($availableServiceTypes as $serviceTypeId => $serviceType) {
+                $schedule = $scheduleByServiceType[$serviceTypeId] ?? collect();
+                $congregants = $schedule->pluck('congregants')->flatten();
+                $row[] = $congregants->pluck('full_name')->implode(', ');
+            }
+            $rows[] = $row;
+        }
+
+        $filename = implode('_', [
+            $scheduleGroup->activity->name,
+            $scheduleGroup->start_date,
+            $scheduleGroup->end_date,
+        ]);
+
+        return [
+            'filename' => $filename,
+            'headers' => $csvHeaders,
+            'rows' => $rows,
+        ];
+    }
+
     public function delete(int $id)
     {
         $scheduleGroup = ScheduleGroup::findOrFail($id, ['id']);
@@ -163,6 +209,13 @@ class ScheduleService
 
             $scheduleGroup->delete();
         });
+    }
+
+    public function bulkDelete(array $ids): void
+    {
+        foreach ($ids as $id) {
+            $this->delete($id);
+        }
     }
 
     protected function getEligibleCongregants(

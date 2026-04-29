@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BulkDestroyRequest;
 use App\Http\Requests\IndexActivityRequest;
 use App\Http\Requests\StoreActivityRequest;
 use App\Http\Requests\UpdateActivityRequest;
@@ -152,6 +153,18 @@ class ActivityController extends Controller implements HasMiddleware
 
             return redirect()->route('activities.index')
                 ->with('success', __('activities.success_delete'));
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'activities.index');
+        }
+    }
+
+    public function bulkDestroy(BulkDestroyRequest $request)
+    {
+        try {
+            $this->activityService->bulkDelete($request->validated('ids'));
+
+            return redirect()->route('activities.index')
+                ->with('success', __('activities.success_bulk_delete'));
         } catch (\Exception $e) {
             return $this->handleException($e, 'activities.index');
         }

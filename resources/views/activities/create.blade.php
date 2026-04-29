@@ -137,58 +137,58 @@
 
         <a class="btn btn-secondary" href="{{ url()->previous() }}">@lang('back')</a>
     </form>
+@endsection
 
+@section('javascript')
     <script>
-        $(document).ready(function() {
-            const toggleEndConditionFields = () => {
-                let endCondition = $('#end_condition').val();
+        function toggleRecurrenceFields() {
+            const frequency = document.getElementById('frequency').value;
+            const intervalGroup = document.getElementById('interval-group');
+            const weeklyDays = document.getElementById('weekly-days');
+            const endConditionGroup = document.getElementById('end-condition-group');
+            const endDate = document.getElementById('end-date');
+            const endOccurrences = document.getElementById('end-occurrences');
 
-                if (endCondition === 'on_date') {
-                    $('#end-date').show();
-                    $('#end-occurrences').hide();
-                } else if (endCondition === 'after_occurrences') {
-                    $('#end-date').hide();
-                    $('#end-occurrences').show();
+            if (frequency === 'NONE') {
+                intervalGroup.style.display = 'none';
+                weeklyDays.style.display = 'none';
+                endConditionGroup.style.display = 'none';
+                endDate.style.display = 'none';
+                endOccurrences.style.display = 'none';
+            } else {
+                intervalGroup.style.display = 'block';
+                endConditionGroup.style.display = 'block';
+
+                if (frequency === 'WEEKLY') {
+                    weeklyDays.style.display = 'block';
                 } else {
-                    $('#end-date').hide();
-                    $('#end-occurrences').hide();
+                    weeklyDays.style.display = 'none';
                 }
             }
+        }
 
-            const toggleDaysFields = () => {
-                let frequency = $('#frequency').val();
+        function toggleEndConditionFields() {
+            const endCondition = document.getElementById('end_condition').value;
+            const endDate = document.getElementById('end-date');
+            const endOccurrences = document.getElementById('end-occurrences');
 
-                if (frequency !== 'NONE') {
-                    $('.recurrence-fields').show();
-
-                    if (frequency === 'WEEKLY') {
-                        $('#weekly-days').show();
-                    } else {
-                        $('#weekly-days').hide();
-                    }
-
-                    toggleEndConditionFields();
-                } else {
-                    $('.recurrence-fields').hide();
-                }
+            if (endCondition === 'on_date') {
+                endDate.style.display = 'block';
+                endOccurrences.style.display = 'none';
+            } else if (endCondition === 'after_occurrences') {
+                endDate.style.display = 'none';
+                endOccurrences.style.display = 'block';
+            } else {
+                endDate.style.display = 'none';
+                endOccurrences.style.display = 'none';
             }
+        }
 
-            toggleDaysFields();
+        document.getElementById('frequency').addEventListener('change', toggleRecurrenceFields);
+        document.getElementById('end_condition').addEventListener('change', toggleEndConditionFields);
 
-            $('#frequency').change(function() {
-                toggleDaysFields();
-            });
-
-            $('#end_condition').change(function() {
-                toggleEndConditionFields();
-            });
-
-            $('#start_time').change(function () {
-                const datetimeValue = $(this).val();
-                const dateOnly = datetimeValue.split('T')[0]; 
-
-                $('#until').attr('min', dateOnly);
-            });
-        });
+        // Initialize the form based on old input
+        toggleRecurrenceFields();
+        toggleEndConditionFields();
     </script>
 @endsection

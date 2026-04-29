@@ -74,7 +74,10 @@
 
                         @foreach($allActivities as $activity)
                             <div class="service-type-group mb-3" data-activity-id="{{ $activity->id }}">
-                                <h6 class="text-muted">{{ $activity->name }}</h6>
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <input class="form-check-input select-all-st" type="checkbox" id="select_all_st_{{ $activity->id }}" data-activity-id="{{ $activity->id }}">
+                                    <h6 class="text-muted mb-0">{{ $activity->name }}</h6>
+                                </div>
                                 <div class="row">
                                     @foreach($serviceTypes->filter(fn($st) => $st->activities->contains('id', $activity->id)) as $serviceType)
                                         <div class="col-md-3">
@@ -151,22 +154,38 @@
             },
         });
 
-    function filterServiceTypes() {
+        function filterServiceTypes() {
             const activityId = $('#activity_filter').val();
-            
             $('.service-type-group').each(function() {
-                if (activityId === '') {
+                if (activityId === '' || $(this).data('activity-id') == activityId) {
                     $(this).show();
                 } else {
-                    const groupActivityId = $(this).data('activity-id');
-                    
-                    if (groupActivityId == activityId) {
-                        $(this).show();
-                    } else {
-                        $(this).hide();
-                    }
+                    $(this).hide();
                 }
             });
         }
+
+        function updateSelectAllSt(activityId) {
+            const $boxes = $('input[name="service_types[' + activityId + '][]"]');
+            const $selectAll = $('#select_all_st_' + activityId);
+            const checked = $boxes.filter(':checked').length;
+            if (checked === 0) {
+                $selectAll.prop({ checked: false, indeterminate: false });
+            } else if (checked === $boxes.length) {
+                $selectAll.prop({ checked: true, indeterminate: false });
+            } else {
+                $selectAll.prop({ checked: false, indeterminate: true });
+            }
+        }
+
+        $('.select-all-st').on('change', function() {
+            const activityId = $(this).data('activity-id');
+            $('input[name="service_types[' + activityId + '][]"]').prop('checked', $(this).prop('checked'));
+        });
+
+        $('[name^="service_types["]').on('change', function() {
+            const match = $(this).attr('name').match(/service_types\[(\d+)\]/);
+            if (match) updateSelectAllSt(match[1]);
+        });
     </script>
 @endsection

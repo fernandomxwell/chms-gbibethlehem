@@ -32,12 +32,3 @@
         @endauth
     </div>
 </nav>
-
-@section('javascript')
-    <script>
-        const dropdownElement = document.getElementById('topbarProfileDropdown');
-        dropdownElement.addEventListener('shown.bs.dropdown', function () {
-            this.setAttribute('aria-expanded', 'false');
-        });
-    </script>
-@endsection

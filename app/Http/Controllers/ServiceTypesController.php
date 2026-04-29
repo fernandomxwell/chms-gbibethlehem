@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BulkDestroyRequest;
 use App\Http\Requests\IndexServiceTypeRequest;
 use App\Http\Requests\StoreServiceTypeRequest;
 use App\Http\Requests\UpdateServiceTypeRequest;
@@ -144,6 +145,18 @@ class ServiceTypesController extends Controller implements HasMiddleware
 
             return redirect()->route('service_types.index')
                 ->with('success', __('service_types.success_delete'));
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'service_types.index');
+        }
+    }
+
+    public function bulkDestroy(BulkDestroyRequest $request)
+    {
+        try {
+            $this->serviceTypeService->bulkDelete($request->validated('ids'));
+
+            return redirect()->route('service_types.index')
+                ->with('success', __('service_types.success_bulk_delete'));
         } catch (\Exception $e) {
             return $this->handleException($e, 'service_types.index');
         }

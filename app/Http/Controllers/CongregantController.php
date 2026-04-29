@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\BulkDestroyRequest;
+use App\Http\Requests\ImportCongregantRequest;
 use App\Http\Requests\IndexCongregantRequest;
 use App\Http\Requests\StoreCongregantRequest;
 use App\Http\Requests\UpdateCongregantRequest;
@@ -29,6 +31,7 @@ class CongregantController extends Controller implements HasMiddleware
                 'create',
                 'show',
                 'edit',
+                'importForm',
             ]),
         ];
     }
@@ -134,6 +137,68 @@ class CongregantController extends Controller implements HasMiddleware
 
             return redirect()->route('congregants.index')
                 ->with('success', __('congregants.success_delete'));
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregants.index');
+        }
+    }
+
+    public function bulkDestroy(BulkDestroyRequest $request)
+    {
+        try {
+            $this->congregantService->bulkDelete($request->validated('ids'));
+
+            return redirect()->route('congregants.index')
+                ->with('success', __('congregants.success_bulk_delete'));
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregants.index');
+        }
+    }
+
+    /**
+     * Export all congregants as CSV.
+     */
+    public function export()
+    {
+        try {
+            return $this->congregantService->exportCsv();
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregants.index');
+        }
+    }
+
+    /**
+     * Download a blank CSV import template.
+     */
+    public function downloadTemplate()
+    {
+        try {
+            return $this->congregantService->downloadTemplate();
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregants.index');
+        }
+    }
+
+    /**
+     * Show the import form.
+     */
+    public function importForm()
+    {
+        try {
+            return view('congregants.import');
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregants.index');
+        }
+    }
+
+    /**
+     * Process the uploaded CSV and import congregants.
+     */
+    public function import(ImportCongregantRequest $request)
+    {
+        try {
+            $result = $this->congregantService->importCsv($request->file('file'));
+
+            return view('congregants.import', ['result' => $result]);
         } catch (\Exception $e) {
             return $this->handleException($e, 'congregants.index');
         }

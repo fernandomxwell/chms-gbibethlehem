@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\HonorificTitle;
 use App\Traits\Models\Searchable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -19,6 +20,7 @@ class Congregant extends Model
      * @var array<int, string>
      */
     protected $fillable = [
+        'honorific_title',
         'full_name',
         'gender',
         'date_of_birth',
@@ -35,6 +37,7 @@ class Congregant extends Model
      * @return array<string, string>
      */
     protected $casts = [
+        'honorific_title' => HonorificTitle::class,
         'date_of_birth' => 'date',
         'date_of_baptism' => 'date',
     ];

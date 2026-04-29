@@ -78,6 +78,13 @@ class ActivityService
         Activity::findOrFail($id, ['id'])->delete();
     }
 
+    public function bulkDelete(array $ids): void
+    {
+        foreach ($ids as $id) {
+            $this->delete($id);
+        }
+    }
+
     public function getActivitiesForAjax(Request $request)
     {
         return Activity::searchBy($request->all())

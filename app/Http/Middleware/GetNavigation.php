@@ -44,28 +44,38 @@ class GetNavigation
                     ]);
             });
 
-            // Resource Fuzzy Match (e.g. activities.edit -> activities.index)
-            if (!$activeMenu && str_contains($routeName, '.')) {
+            // Resource Fuzzy Match: strip segments from the right until an .index route is found
+            // e.g. congregants.import.form -> congregants.import.index (miss) -> congregants.index (hit)
+            if (! $activeMenu && str_contains($routeName, '.')) {
                 $parts = explode('.', $routeName);
-                array_pop($parts);
-                $resourcePrefix = implode('.', $parts);
 
-                $indexRoute = $resourcePrefix . '.index';
-                $activeMenu = Cache::remember("menu_for_route:{$indexRoute}", 3600, function () use ($indexRoute) {
-                    return Menu::where('link', $indexRoute)
-                        ->with('parents')
-                        ->first([
-                            'name',
-                            'link',
-                            'parent_id',
-                        ]);
-                });
+                while (count($parts) > 1) {
+                    array_pop($parts);
+                    $indexRoute = implode('.', $parts) . '.index';
 
-                if ($activeMenu) {
-                    $virtualCrumb = (object)[
-                        'translated_name' => __("{$routeName}"),
-                        'link' => $routeName,
-                    ];
+                    $activeMenu = Cache::remember("menu_for_route:{$indexRoute}", 3600, function () use ($indexRoute) {
+                        return Menu::where('link', $indexRoute)
+                            ->with('parents')
+                            ->first([
+                                'name',
+                                'link',
+                                'parent_id',
+                            ]);
+                    });
+
+                    if ($activeMenu) {
+                        $translationKey = $routeName;
+                        if (__($translationKey) === $translationKey) {
+                            $crumbParts = explode('.', $routeName);
+                            array_pop($crumbParts);
+                            $translationKey = implode('.', $crumbParts);
+                        }
+                        $virtualCrumb = (object)[
+                            'translated_name' => __($translationKey),
+                            'link' => $routeName,
+                        ];
+                        break;
+                    }
                 }
             }
         }

@@ -22,12 +22,15 @@ class CongregantServiceTypeService
                 'serviceTypesPivot.activity:id,name',
             ])
             ->when($validatedData['search'] ?? null, function (Builder $query) use ($validatedData) {
-                $query->searchBy($validatedData)
-                    ->orWhereHas('serviceTypesPivot.activity', function (Builder $query) use ($validatedData) {
-                        $query->searchBy($validatedData);
-                    })
-                    ->orWhereHas('serviceTypes', function (Builder $query) use ($validatedData) {
-                        $query->searchBy($validatedData);
+                $query->has('serviceTypes')
+                    ->where(function (Builder $query) use ($validatedData) {
+                        $query->searchBy($validatedData)
+                            ->orWhereHas('serviceTypesPivot.activity', function (Builder $query) use ($validatedData) {
+                                $query->searchBy($validatedData);
+                            })
+                            ->orWhereHas('serviceTypes', function (Builder $query) use ($validatedData) {
+                                $query->searchBy($validatedData);
+                            });
                     });
             }, function (Builder $query) {
                 $query->has('serviceTypes');
@@ -67,6 +70,13 @@ class CongregantServiceTypeService
     {
         $congregant = Congregant::findOrFail($congregantId, ['id']);
         $congregant->serviceTypes()->detach();
+    }
+
+    public function bulkDelete(array $ids): void
+    {
+        foreach ($ids as $id) {
+            $this->delete($id);
+        }
     }
 
     protected function assign(int $congregantId, bool $canServeConsecutively, array $serviceTypes)

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Activity;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -20,10 +21,26 @@ class StoreScheduleRequest extends FormRequest
      */
     public function rules(): array
     {
+        $activity = Activity::find($this->input('activity_id'));
+
+        $startDateRules = ['required', 'date', Rule::date()->todayOrAfter()];
+        $endDateRules = ['required', 'date', 'after_or_equal:start_date'];
+
+        if ($activity) {
+            $startDateRules[] = 'after_or_equal:' . $activity->start_time->toDateString();
+
+            if ($activity->rrule) {
+                $parsed = parseRrule($activity->rrule);
+                if ($parsed['until']) {
+                    $endDateRules[] = 'before_or_equal:' . $parsed['until'];
+                }
+            }
+        }
+
         return [
             'activity_id' => 'required|exists:activities,id',
-            'start_date' => ['required', 'date',  Rule::date()->todayOrAfter()], // [TODO] Must be a date after or equal to start_time of the activity
-            'end_date' => 'required|date|after_or_equal:start_date', // [TODO] Must be a date before or equal to end_time of the activity
+            'start_date' => $startDateRules,
+            'end_date' => $endDateRules,
             'service_types' => 'required|array',
             'service_types.*.include' => 'nullable|boolean',
             'service_types.*.count' => 'nullable|integer|min:1|required_with:service_types.*.include',

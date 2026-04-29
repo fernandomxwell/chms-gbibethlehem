@@ -3,13 +3,17 @@
 namespace App\Http\Requests;
 
 use App\Enums\Gender;
+use App\Enums\HonorificTitle;
 use App\Enums\Status;
+use App\Traits\ValidatesHonorificGender;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Enum;
 
 class UpdateCongregantRequest extends FormRequest
 {
+    use ValidatesHonorificGender;
+
     /**
      * Determine if the user is authorized to make this request.
      */
@@ -24,6 +28,7 @@ class UpdateCongregantRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'honorific_title' => ['nullable', new Enum(HonorificTitle::class)],
             'full_name' => 'required|string|max:100',
             'gender' => ['required', new Enum(Gender::class)],
             'date_of_birth' => ['nullable', 'date', Rule::date()->todayOrBefore()],
@@ -50,6 +55,7 @@ class UpdateCongregantRequest extends FormRequest
     public function attributes()
     {
         return [
+            'honorific_title' => __('honorific_title'),
             'full_name' => __('full_name'),
             'gender' => __('gender'),
             'date_of_birth' => __('date_of_birth'),

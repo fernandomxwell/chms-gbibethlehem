@@ -13,7 +13,7 @@
                 @else
                     <li class="breadcrumb-item">
                         @if(!empty($crumb->link) && Route::has($crumb->link))
-                            <a href="{{ route($crumb->link) }}" class="text-decoration-none">
+                            <a href="{{ route($crumb->link) }}">
                                 {{ $crumb->translated_name }}
                             </a>
                         @else

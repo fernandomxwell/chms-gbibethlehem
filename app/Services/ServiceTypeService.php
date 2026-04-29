@@ -88,6 +88,13 @@ class ServiceTypeService
         });
     }
 
+    public function bulkDelete(array $ids): void
+    {
+        foreach ($ids as $id) {
+            $this->delete($id);
+        }
+    }
+
     public function getAll($attributes = ['*'], array $relations = [])
     {
         return ServiceType::select($attributes)->with($relations)->get();

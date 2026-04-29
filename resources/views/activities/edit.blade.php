@@ -143,7 +143,9 @@
 
         <a class="btn btn-secondary" href="{{ url()->previous() }}">@lang('back')</a>
     </form>
+@endsection
 
+@section('javascript')
     <script>
         $(document).ready(function() {
             const toggleEndConditionFields = () => {

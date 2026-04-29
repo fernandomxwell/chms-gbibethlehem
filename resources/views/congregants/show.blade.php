@@ -4,6 +4,10 @@
     <h1>@lang('congregants.show')</h1>
 
     <div class="form-group mb-3">
+        <label class="form-label">@lang('honorific_title'):</label>
+        <input type="text" readonly class="form-control" value="{{ $congregant->honorific_title?->label() ?? '-' }}">
+    </div>
+    <div class="form-group mb-3">
         <label class="form-label">@lang('full_name'):</label>
         <input type="text" readonly class="form-control" value="{{ $congregant->full_name }}">
     </div>

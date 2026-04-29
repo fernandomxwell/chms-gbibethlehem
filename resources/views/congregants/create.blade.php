@@ -7,6 +7,19 @@
         @csrf
 
         <div class="mb-3">
+            <label for="honorific_title" class="form-label">@lang('honorific_title'):</label>
+            <select class="form-select @error('honorific_title') is-invalid @enderror" id="honorific_title" name="honorific_title">
+                <option value="">— @lang('none') —</option>
+                @foreach(\App\Enums\HonorificTitle::cases() as $title)
+                    <option value="{{ $title->value }}" {{ old('honorific_title') == $title->value ? 'selected' : '' }}>{{ $title->label() }}</option>
+                @endforeach
+            </select>
+            @error('honorific_title')
+                <div class="invalid-feedback">{{ $message }}</div>
+            @enderror
+        </div>
+
+        <div class="mb-3">
             <label for="full_name" class="form-label">@lang('full_name'):</label>
             <input type="text" name="full_name" value="{{ old('full_name') }}" class="form-control @error('full_name') is-invalid @enderror" maxlength="100" required>
             @error('full_name')
@@ -72,14 +85,8 @@
 
         <a class="btn btn-secondary" href="{{ url()->previous() }}">@lang('back')</a>
     </form>
+@endsection
 
-    <script>
-        $(document).ready(function() {
-            $('#date_of_birth').change(function () {
-                const date = $(this).val();
-
-                $('#date_of_baptism').attr('min', date);
-            });
-        });
-    </script>
+@section('javascript')
+    @include('congregants.script')
 @endsection

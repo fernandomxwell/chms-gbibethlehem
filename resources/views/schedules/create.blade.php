@@ -41,9 +41,19 @@
                     <thead>
                         <tr>
                             <th>@lang('service_types.index')</th>
-                            <th class="text-center">@lang('include')?</th>
+                            <th class="text-center">
+                                <div class="d-flex justify-content-center align-items-center gap-2">
+                                    <input class="form-check-input" type="checkbox" id="select_all_include" title="{{ __('select_all') }}">
+                                    <label class="form-check-label mb-0" for="select_all_include">@lang('include')?</label>
+                                </div>
+                            </th>
                             <th style="width: 100px;">@lang('count')</th>
-                            <th style="width: 150px;" class="text-center">@lang('repeatable')?</th>
+                            <th style="width: 150px;" class="text-center">
+                                <div class="d-flex justify-content-center align-items-center gap-2">
+                                    <input class="form-check-input" type="checkbox" id="select_all_repeatable" title="{{ __('select_all') }}">
+                                    <label class="form-check-label mb-0" for="select_all_repeatable">@lang('repeatable')?</label>
+                                </div>
+                            </th>
                         </tr>
                     </thead>
                     <tbody>
@@ -137,6 +147,43 @@
             },
         });
 
+        function updateSelectAll(columnCheckboxes, selectAllEl) {
+            const visible = columnCheckboxes.filter(':visible');
+            const checkedCount = visible.filter(':checked').length;
+            if (checkedCount === 0) {
+                selectAllEl.prop({ checked: false, indeterminate: false });
+            } else if (checkedCount === visible.length) {
+                selectAllEl.prop({ checked: true, indeterminate: false });
+            } else {
+                selectAllEl.prop({ checked: false, indeterminate: true });
+            }
+        }
+
+        const $includeCheckboxes = $('input[name*="[include]"]');
+        const $repeatableCheckboxes = $('input[name*="[is_repeatable]"]');
+        const $selectAllInclude = $('#select_all_include');
+        const $selectAllRepeatable = $('#select_all_repeatable');
+
+        $selectAllInclude.on('change', function() {
+            $includeCheckboxes.filter(function() {
+                return $(this).closest('tr').is(':visible');
+            }).prop('checked', $(this).prop('checked'));
+        });
+
+        $selectAllRepeatable.on('change', function() {
+            $repeatableCheckboxes.filter(function() {
+                return $(this).closest('tr').is(':visible');
+            }).prop('checked', $(this).prop('checked'));
+        });
+
+        $includeCheckboxes.on('change', function() {
+            updateSelectAll($includeCheckboxes, $selectAllInclude);
+        });
+
+        $repeatableCheckboxes.on('change', function() {
+            updateSelectAll($repeatableCheckboxes, $selectAllRepeatable);
+        });
+
         $('#activity_id').on('change', function() {
             const selectedActivityId = $(this).val();
             $('.service-type-row').each(function() {
@@ -149,6 +196,8 @@
                     $(this).find('input[type="number"]').val(1);
                 }
             });
+            updateSelectAll($includeCheckboxes, $selectAllInclude);
+            updateSelectAll($repeatableCheckboxes, $selectAllRepeatable);
         });
     </script>
 @endsection
