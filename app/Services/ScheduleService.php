@@ -66,18 +66,15 @@ class ScheduleService
             foreach ($dates as $date) {
                 $date = $date->format('Y-m-d');
 
-                foreach ($data['service_types'] as $serviceTypeId => $serviceType) {
-                    if (! isset($serviceTypes[$serviceTypeId])) {
-                        continue;
-                    }
+                $assignments = [];
 
-                    if (! isset($serviceType['include'])) {
+                foreach ($data['service_types'] as $serviceTypeId => $serviceType) {
+                    if (! isset($serviceTypes[$serviceTypeId]) || ! isset($serviceType['include'])) {
                         continue;
                     }
 
                     $isRepeatable = isset($serviceType['is_repeatable']);
-
-                    $eligibleCongregants = $this->getEligibleCongregants(
+                    $eligible = $this->getEligibleCongregants(
                         $activity->id,
                         $serviceTypeId,
                         $date,
@@ -86,8 +83,23 @@ class ScheduleService
                         $isRepeatable
                     );
 
-                    $selected = $eligibleCongregants->shuffle()->take($serviceType['count']);
+                    $selected = $eligible
+                        ->sortBy([['service_count', 'asc'], ['total_activity_count', 'desc']])
+                        ->groupBy(fn($c) => $c->service_count . '_' . $c->total_activity_count)
+                        ->flatMap(fn($group) => $group->shuffle()->values())
+                        ->take($serviceType['count'])
+                        ->values();
 
+                    $assignments[$serviceTypeId] = [
+                        'required' => (int) $serviceType['count'],
+                        'eligible' => $eligible,
+                        'selected' => $selected,
+                    ];
+                }
+
+                $this->fillShortfalls($assignments);
+
+                foreach ($assignments as $serviceTypeId => $assignment) {
                     $schedule = Schedule::create([
                         'schedule_group_id' => $group->id,
                         'activity_id' => $activity->id,
@@ -95,7 +107,7 @@ class ScheduleService
                         'scheduled_date' => $date,
                     ]);
 
-                    $schedule->congregants()->attach($selected->pluck('id'));
+                    $schedule->congregants()->attach($assignment['selected']->pluck('id'));
                 }
 
                 $lastScheduleDate = $date;
@@ -231,13 +243,21 @@ class ScheduleService
         bool $isRepeatable
     ) {
         $baseQuery = Congregant::query()
+            ->select(['congregants.id'])
             ->whereHas('serviceTypesPivot', function ($q) use ($activityId, $serviceTypeId) {
                 $q->where('activity_id', $activityId)
                     ->where('service_type_id', $serviceTypeId);
             })
             ->whereDoesntHave('schedules', function ($q) use ($date) {
                 $q->where('scheduled_date', $date);
-            });
+            })
+            ->withCount(['schedules as service_count' => function ($q) use ($activityId, $serviceTypeId) {
+                $q->where('activity_id', $activityId)
+                    ->where('service_type_id', $serviceTypeId);
+            }])
+            ->withCount(['schedules as total_activity_count' => function ($q) use ($activityId) {
+                $q->where('activity_id', $activityId);
+            }]);
 
         $freshCongregants = $baseQuery->clone()
             ->when($lastScheduleDate, function ($q) use ($lastScheduleDate) {
@@ -245,17 +265,74 @@ class ScheduleService
                     $q->where('scheduled_date', $lastScheduleDate);
                 });
             })
-            ->get(['id']);
+            ->get();
 
         if ($freshCongregants->count() >= $requiredCount || ! $isRepeatable) {
             return $freshCongregants;
         }
 
         $willingToRepeat = $baseQuery->clone()
-            ->whereNotIn('id', $freshCongregants->pluck('id'))
+            ->whereNotIn('congregants.id', $freshCongregants->pluck('id'))
             ->where('can_serve_consecutively', true)
-            ->get(['id']);
+            ->get();
 
         return $freshCongregants->merge($willingToRepeat);
+    }
+
+    protected function fillShortfalls(array &$assignments): void
+    {
+        $serviceTypeIds = array_keys($assignments);
+
+        // Pass 1: fill shortfalls by shifting from service types that have surplus
+        foreach ($serviceTypeIds as $shortTypeId) {
+            $shortfall = $assignments[$shortTypeId]['required'] - $assignments[$shortTypeId]['selected']->count();
+            if ($shortfall <= 0) continue;
+
+            foreach ($serviceTypeIds as $otherTypeId) {
+                if ($otherTypeId === $shortTypeId) continue;
+
+                $surplus = $assignments[$otherTypeId]['selected']->count() - $assignments[$otherTypeId]['required'];
+                if ($surplus <= 0) continue;
+
+                $this->shiftBetweenAssignments($assignments, $shortTypeId, $otherTypeId, min($shortfall, $surplus));
+
+                $shortfall = $assignments[$shortTypeId]['required'] - $assignments[$shortTypeId]['selected']->count();
+                if ($shortfall <= 0) break;
+            }
+        }
+
+        // Pass 2: if a service type is still completely empty, shift from any other service type as last resort
+        foreach ($serviceTypeIds as $shortTypeId) {
+            if ($assignments[$shortTypeId]['selected']->isNotEmpty()) continue;
+
+            foreach ($serviceTypeIds as $otherTypeId) {
+                if ($otherTypeId === $shortTypeId) continue;
+                if ($assignments[$otherTypeId]['selected']->isEmpty()) continue;
+
+                $this->shiftBetweenAssignments($assignments, $shortTypeId, $otherTypeId, $assignments[$shortTypeId]['required']);
+
+                if ($assignments[$shortTypeId]['selected']->isNotEmpty()) break;
+            }
+        }
+    }
+
+    private function shiftBetweenAssignments(array &$assignments, int $toTypeId, int $fromTypeId, int $limit): void
+    {
+        $eligibleIds = $assignments[$toTypeId]['eligible']->pluck('id')->all();
+        $alreadySelectedIds = $assignments[$toTypeId]['selected']->pluck('id')->all();
+
+        $toShift = $assignments[$fromTypeId]['selected']
+            ->whereIn('id', $eligibleIds)
+            ->whereNotIn('id', $alreadySelectedIds)
+            ->sortBy([['service_count', 'asc'], ['total_activity_count', 'desc']])
+            ->take($limit)
+            ->values();
+
+        if ($toShift->isEmpty()) return;
+
+        $shiftIds = $toShift->pluck('id')->all();
+        $assignments[$toTypeId]['selected'] = $assignments[$toTypeId]['selected']->merge($toShift)->values();
+        $assignments[$fromTypeId]['selected'] = $assignments[$fromTypeId]['selected']
+            ->whereNotIn('id', $shiftIds)->values();
     }
 }
