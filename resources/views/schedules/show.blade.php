@@ -7,7 +7,7 @@
         <table class="table table-bordered table-hover">
             <thead class="text-center align-middle table-light">
                 <tr>
-                    <th class="text-nowrap">Date</th>
+                    <th class="text-nowrap">@lang('date')</th>
                     @foreach ($serviceTypes as $serviceType)
                         <th class="text-nowrap">{{ $serviceType->name }}</th>
                     @endforeach

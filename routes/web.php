@@ -26,9 +26,17 @@ Route::middleware(['auth'])
         Route::delete('congregants/bulk-destroy', [CongregantController::class, 'bulkDestroy'])->name('congregants.bulk-destroy');
         Route::resource('congregants', CongregantController::class);
 
+        Route::get('service_types/export', [ServiceTypesController::class, 'export'])->name('service_types.export');
+        Route::get('service_types/template', [ServiceTypesController::class, 'downloadTemplate'])->name('service_types.template');
+        Route::get('service_types/import', [ServiceTypesController::class, 'importForm'])->name('service_types.import.form');
+        Route::post('service_types/import', [ServiceTypesController::class, 'import'])->name('service_types.import');
         Route::delete('service_types/bulk-destroy', [ServiceTypesController::class, 'bulkDestroy'])->name('service_types.bulk-destroy');
         Route::resource('service_types', ServiceTypesController::class);
 
+        Route::get('congregant_services/export', [CongregantServiceTypeController::class, 'export'])->name('congregant_services.export');
+        Route::get('congregant_services/template', [CongregantServiceTypeController::class, 'downloadTemplate'])->name('congregant_services.template');
+        Route::get('congregant_services/import', [CongregantServiceTypeController::class, 'importForm'])->name('congregant_services.import.form');
+        Route::post('congregant_services/import', [CongregantServiceTypeController::class, 'import'])->name('congregant_services.import');
         Route::delete('congregant_services/bulk-destroy', [CongregantServiceTypeController::class, 'bulkDestroy'])->name('congregant_services.bulk-destroy');
         Route::resource('congregant_services', CongregantServiceTypeController::class)->except(['show']);
 

@@ -20,8 +20,6 @@ class UpdateCongregantServiceTypeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'activity_ids' => 'required|array|min:1',
-            'activity_ids.*' => 'integer|exists:activities,id',
             'service_types' => 'required|array|min:1',
             'service_types.*' => 'required|array',
             'service_types.*.*' => 'integer|exists:service_types,id',
@@ -35,7 +33,6 @@ class UpdateCongregantServiceTypeRequest extends FormRequest
     public function attributes()
     {
         return [
-            'activity_ids' => __('activities.index'),
             'service_types' => __('service_types.index'),
             'can_serve_consecutively' => __('willing_to_serve'),
         ];

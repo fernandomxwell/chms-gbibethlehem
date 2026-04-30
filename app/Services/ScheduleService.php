@@ -106,7 +106,7 @@ class ScheduleService
     public function show(string $id)
     {
         $schedules = Schedule::where('schedule_group_id', $id)
-            ->with('congregants:id,full_name')
+            ->with('congregants:id,honorific_title,full_name')
             ->orderBy('scheduled_date')
             ->get([
                 'id',
@@ -137,7 +137,9 @@ class ScheduleService
                 $serviceType = $availableServiceTypes[$serviceTypeId];
                 $congregants = $schedule->pluck('congregants')->flatten();
 
-                $row[$serviceType->name] = $congregants->pluck('full_name')->implode(',<br>');
+                $row[$serviceType->name] = $congregants
+                    ->map(fn($c) => trim(($c->honorific_title?->label() ?? '') . ' ' . $c->full_name))
+                    ->implode(',<br>');
             }
 
             $scheduleData[] = $row;
@@ -155,7 +157,7 @@ class ScheduleService
             ->findOrFail($id, ['id', 'activity_id', 'start_date', 'end_date']);
 
         $schedules = Schedule::where('schedule_group_id', $id)
-            ->with('congregants:id,full_name')
+            ->with('congregants:id,honorific_title,full_name')
             ->orderBy('scheduled_date')
             ->get(['id', 'service_type_id', 'scheduled_date']);
 
@@ -166,7 +168,7 @@ class ScheduleService
 
         $schedules = $schedules->groupBy(['scheduled_date', 'service_type_id']);
 
-        $csvHeaders = ['Date'];
+        $csvHeaders = [__('date')];
         foreach ($availableServiceTypes as $serviceType) {
             $csvHeaders[] = $serviceType->name;
         }
@@ -177,7 +179,9 @@ class ScheduleService
             foreach ($availableServiceTypes as $serviceTypeId => $serviceType) {
                 $schedule = $scheduleByServiceType[$serviceTypeId] ?? collect();
                 $congregants = $schedule->pluck('congregants')->flatten();
-                $row[] = $congregants->pluck('full_name')->implode(', ');
+                $row[] = $congregants
+                    ->map(fn($c) => trim(($c->honorific_title?->label() ?? '') . ' ' . $c->full_name))
+                    ->implode(', ');
             }
             $rows[] = $row;
         }

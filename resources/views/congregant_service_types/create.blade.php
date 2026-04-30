@@ -20,36 +20,8 @@
 
         <div class="accordion mb-3">
             <div class="accordion-item">
-                <h2 class="accordion-header" id="panelsStayOpen-headingOne">
-                    <button class="accordion-button bg-light text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseOne" aria-expanded="true" aria-controls="panelsStayOpen-collapseOne">
-                        @lang('activities.index')
-                    </button>
-                </h2>
-                <div id="panelsStayOpen-collapseOne" class="accordion-collapse collapse show" aria-labelledby="panelsStayOpen-headingOne">
-                    <div class="accordion-body">
-                        <div class="row">
-                            @foreach($activities as $activity)
-                                <div class="col-md-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input @error('activity_ids') is-invalid @enderror" type="checkbox" name="activity_ids[]" value="{{ $activity->id }}" {{ old('activity_ids') !== null ? (in_array($activity->id, old('activity_ids')) ? 'checked' : '') : '' }}>
-                                        <label class="form-check-label" for="{{ $activity->name }}">{{ $activity->name }}</label>
-                                    </div>
-                                </div>
-                            @endforeach
-                            @error('activity_ids')
-                                <div class="small text-danger">{{ $message }}</div>
-                            @enderror
-                            @error('activity_ids.*')
-                                <div class="small text-danger">{{ $message }}</div>
-                            @enderror
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="accordion-item">
                 <h2 class="accordion-header" id="panelsStayOpen-headingTwo">
-                    <button class="accordion-button bg-light text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="false" aria-controls="panelsStayOpen-collapseTwo">
+                    <button class="accordion-button bg-light text-dark" type="button" data-bs-toggle="collapse" data-bs-target="#panelsStayOpen-collapseTwo" aria-expanded="true" aria-controls="panelsStayOpen-collapseTwo">
                         @lang('service_types.index')
                     </button>
                 </h2>

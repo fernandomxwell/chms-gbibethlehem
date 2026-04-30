@@ -147,6 +147,13 @@
             },
         });
 
+        @if(old('activity_id'))
+            @php $oldActivity = App\Models\Activity::find(old('activity_id'), ['id', 'name']); @endphp
+            @if($oldActivity)
+                $('#activity_id').append(new Option("{{ $oldActivity->name }}", "{{ $oldActivity->id }}", true, true)).trigger('change');
+            @endif
+        @endif
+
         function updateSelectAll(columnCheckboxes, selectAllEl) {
             const visible = columnCheckboxes.filter(':visible');
             const checkedCount = visible.filter(':checked').length;

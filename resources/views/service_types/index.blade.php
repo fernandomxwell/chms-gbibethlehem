@@ -8,6 +8,8 @@
 
     <div class="d-flex flex-wrap gap-2 mb-2">
         <a class="btn btn-primary" href="{{ route('service_types.create') }}">@lang('service_types.create')</a>
+        <a class="btn btn-success" href="{{ route('service_types.export') }}">@lang('service_types.export')</a>
+        <a class="btn btn-secondary" href="{{ route('service_types.import.form') }}">@lang('service_types.import')</a>
         <button type="button" id="bulk-delete-btn" class="btn btn-danger" disabled
             form="bulk-form" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
             @lang('bulk_delete') (<span id="bulk-selected-count">0</span>)

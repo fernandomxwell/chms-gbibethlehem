@@ -32,6 +32,7 @@ class CongregantController extends Controller implements HasMiddleware
                 'show',
                 'edit',
                 'importForm',
+                'import',
             ]),
         ];
     }

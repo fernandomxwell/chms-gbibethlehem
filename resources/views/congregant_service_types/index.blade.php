@@ -8,6 +8,8 @@
 
     <div class="d-flex flex-wrap gap-2 mb-2">
         <a class="btn btn-primary" href="{{ route('congregant_services.create') }}">@lang('congregant_services.create')</a>
+        <a class="btn btn-success" href="{{ route('congregant_services.export') }}">@lang('congregant_services.export')</a>
+        <a class="btn btn-secondary" href="{{ route('congregant_services.import.form') }}">@lang('congregant_services.import')</a>
         <button type="button" id="bulk-delete-btn" class="btn btn-danger" disabled
             form="bulk-form" data-bs-toggle="modal" data-bs-target="#bulkDeleteModal">
             @lang('bulk_delete') (<span id="bulk-selected-count">0</span>)

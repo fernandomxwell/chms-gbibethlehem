@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\BulkDestroyRequest;
+use App\Http\Requests\ImportServiceTypeRequest;
 use App\Http\Requests\IndexServiceTypeRequest;
 use App\Http\Requests\StoreServiceTypeRequest;
 use App\Http\Requests\UpdateServiceTypeRequest;
@@ -30,6 +31,8 @@ class ServiceTypesController extends Controller implements HasMiddleware
                 'create',
                 'show',
                 'edit',
+                'importForm',
+                'import',
             ]),
         ];
     }
@@ -157,6 +160,44 @@ class ServiceTypesController extends Controller implements HasMiddleware
 
             return redirect()->route('service_types.index')
                 ->with('success', __('service_types.success_bulk_delete'));
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'service_types.index');
+        }
+    }
+
+    public function export()
+    {
+        try {
+            return $this->serviceTypeService->exportCsv();
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'service_types.index');
+        }
+    }
+
+    public function downloadTemplate()
+    {
+        try {
+            return $this->serviceTypeService->downloadTemplate();
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'service_types.index');
+        }
+    }
+
+    public function importForm()
+    {
+        try {
+            return view('service_types.import');
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'service_types.index');
+        }
+    }
+
+    public function import(ImportServiceTypeRequest $request)
+    {
+        try {
+            $result = $this->serviceTypeService->importCsv($request->file('file'));
+
+            return view('service_types.import', ['result' => $result]);
         } catch (\Exception $e) {
             return $this->handleException($e, 'service_types.index');
         }

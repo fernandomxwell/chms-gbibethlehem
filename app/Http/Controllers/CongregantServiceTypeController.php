@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\BulkDestroyRequest;
+use App\Http\Requests\ImportCongregantServiceTypeRequest;
 use App\Http\Requests\IndexCongregantServiceTypeRequest;
 use App\Http\Requests\StoreCongregantServiceTypeRequest;
 use App\Http\Requests\UpdateCongregantServiceTypeRequest;
@@ -30,6 +31,8 @@ class CongregantServiceTypeController extends Controller implements HasMiddlewar
                 'index',
                 'create',
                 'edit',
+                'importForm',
+                'import',
             ]),
         ];
     }
@@ -156,6 +159,44 @@ class CongregantServiceTypeController extends Controller implements HasMiddlewar
 
             return redirect()->route('congregant_services.index')
                 ->with('success', __('congregant_services.success_bulk_delete'));
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregant_services.index');
+        }
+    }
+
+    public function export()
+    {
+        try {
+            return $this->congregantServiceTypeService->exportCsv();
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregant_services.index');
+        }
+    }
+
+    public function downloadTemplate()
+    {
+        try {
+            return $this->congregantServiceTypeService->downloadTemplate();
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregant_services.index');
+        }
+    }
+
+    public function importForm()
+    {
+        try {
+            return view('congregant_service_types.import');
+        } catch (\Exception $e) {
+            return $this->handleException($e, 'congregant_services.index');
+        }
+    }
+
+    public function import(ImportCongregantServiceTypeRequest $request)
+    {
+        try {
+            $result = $this->congregantServiceTypeService->importCsv($request->file('file'));
+
+            return view('congregant_service_types.import', ['result' => $result]);
         } catch (\Exception $e) {
             return $this->handleException($e, 'congregant_services.index');
         }
