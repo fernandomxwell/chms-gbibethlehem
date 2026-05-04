@@ -67,6 +67,7 @@ class ScheduleService
                 $date = $date->format('Y-m-d');
 
                 $assignments = [];
+                $assignedCongregantIds = [];
 
                 foreach ($data['service_types'] as $serviceTypeId => $serviceType) {
                     if (! isset($serviceTypes[$serviceTypeId]) || ! isset($serviceType['include'])) {
@@ -80,7 +81,8 @@ class ScheduleService
                         $date,
                         $lastScheduleDate,
                         $serviceType['count'],
-                        $isRepeatable
+                        $isRepeatable,
+                        $assignedCongregantIds
                     );
 
                     $selected = $eligible
@@ -89,6 +91,8 @@ class ScheduleService
                         ->flatMap(fn($group) => $group->shuffle()->values())
                         ->take($serviceType['count'])
                         ->values();
+
+                    $assignedCongregantIds = array_merge($assignedCongregantIds, $selected->pluck('id')->all());
 
                     $assignments[$serviceTypeId] = [
                         'required' => (int) $serviceType['count'],
@@ -240,7 +244,8 @@ class ScheduleService
         string $date,
         string $lastScheduleDate,
         int $requiredCount,
-        bool $isRepeatable
+        bool $isRepeatable,
+        array $excludeIds = []
     ) {
         $baseQuery = Congregant::query()
             ->select(['congregants.id'])
@@ -250,6 +255,9 @@ class ScheduleService
             })
             ->whereDoesntHave('schedules', function ($q) use ($date) {
                 $q->where('scheduled_date', $date);
+            })
+            ->when(! empty($excludeIds), function ($q) use ($excludeIds) {
+                $q->whereNotIn('congregants.id', $excludeIds);
             })
             ->withCount(['schedules as service_count' => function ($q) use ($activityId, $serviceTypeId) {
                 $q->where('activity_id', $activityId)
@@ -321,9 +329,15 @@ class ScheduleService
         $eligibleIds = $assignments[$toTypeId]['eligible']->pluck('id')->all();
         $alreadySelectedIds = $assignments[$toTypeId]['selected']->pluck('id')->all();
 
+        $otherAssignedIds = collect($assignments)
+            ->except([$toTypeId, $fromTypeId])
+            ->flatMap(fn($a) => $a['selected']->pluck('id'))
+            ->all();
+
         $toShift = $assignments[$fromTypeId]['selected']
             ->whereIn('id', $eligibleIds)
             ->whereNotIn('id', $alreadySelectedIds)
+            ->whereNotIn('id', $otherAssignedIds)
             ->sortBy([['service_count', 'asc'], ['total_activity_count', 'desc']])
             ->take($limit)
             ->values();
