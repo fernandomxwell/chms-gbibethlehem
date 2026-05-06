@@ -16,9 +16,11 @@ return new class extends Migration
         DB::statement('
             UPDATE activities
             SET sort_order = (
-                SELECT COUNT(*) FROM activities a2
-                WHERE a2.id <= activities.id
-                AND a2.deleted_at IS NULL
+                SELECT cnt FROM (
+                    SELECT COUNT(*) AS cnt FROM activities a2
+                    WHERE a2.id <= activities.id
+                    AND a2.deleted_at IS NULL
+                ) AS tmp
             )
             WHERE deleted_at IS NULL
         ');
