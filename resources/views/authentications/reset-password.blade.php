@@ -5,25 +5,20 @@
     <div class="login-card">
         <div class="text-center mb-4">
             <div class="login-logo">{{ config('app.name') }}</div>
-            <p class="login-subtitle">Masuk ke akun Anda untuk melanjutkan</p>
+            <p class="login-subtitle">@lang('auth.reset_password_subtitle')</p>
         </div>
 
-        @if (session('status'))
-            <div class="alert alert-success alert-dismissible fade show mb-3" role="alert">
-                <i class="bi bi-check-circle-fill me-2"></i>{{ session('status') }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-        @endif
-
-        @if (session('error'))
+        @if ($errors->any())
             <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
-                <i class="bi bi-exclamation-circle-fill me-2"></i>{{ session('error') }}
+                <i class="bi bi-exclamation-circle-fill me-2"></i>{{ $errors->first() }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
-        <form method="POST" action="{{ route('login') }}">
+        <form method="POST" action="{{ route('password.update') }}">
             @csrf
+
+            <input type="hidden" name="token" value="{{ $token }}">
 
             <div class="mb-3">
                 <label for="email" class="form-label">{{ __('email') }}</label>
@@ -34,7 +29,7 @@
                     <input type="email"
                         class="form-control @error('email') is-invalid @enderror"
                         id="email" name="email"
-                        value="{{ old('email') }}"
+                        value="{{ old('email', $email) }}"
                         required maxlength="255" autofocus
                         placeholder="nama@email.com"
                         style="border-left:0;">
@@ -44,8 +39,8 @@
                 @enderror
             </div>
 
-            <div class="mb-4">
-                <label for="password" class="form-label">{{ __('password') }}</label>
+            <div class="mb-3">
+                <label for="password" class="form-label">{{ __('auth.new_password') }}</label>
                 <div class="input-group">
                     <span class="input-group-text" style="border-color:#d1d5db; background:#f8fafc; border-right:0;">
                         <i class="bi bi-lock" style="color:#94a3b8;"></i>
@@ -53,12 +48,12 @@
                     <input type="password"
                         class="form-control @error('password') is-invalid @enderror"
                         id="password" name="password"
-                        required autocomplete="current-password"
+                        required autocomplete="new-password"
                         placeholder="••••••••"
                         style="border-left:0; border-right:0;">
-                    <button class="input-group-text" type="button" onclick="togglePassword()"
+                    <button class="input-group-text" type="button" onclick="togglePassword('password', 'toggle-icon-pw')"
                         style="border-color:#d1d5db; background:#f8fafc; cursor:pointer; border-left:0;">
-                        <i class="bi bi-eye-slash" id="toggle-icon" style="color:#94a3b8;"></i>
+                        <i class="bi bi-eye-slash" id="toggle-icon-pw" style="color:#94a3b8;"></i>
                     </button>
                 </div>
                 @error('password')
@@ -66,22 +61,27 @@
                 @enderror
             </div>
 
-            <div class="d-flex align-items-center justify-content-between mb-4">
-                <div class="form-check mb-0">
-                    <input type="checkbox" class="form-check-input" id="remember" name="remember">
-                    <label class="form-check-label" for="remember" style="font-size:.8125rem; color:#64748b;">
-                        {{ __('auth.remember') }}
-                    </label>
+            <div class="mb-4">
+                <label for="password_confirmation" class="form-label">{{ __('auth.confirm_password') }}</label>
+                <div class="input-group">
+                    <span class="input-group-text" style="border-color:#d1d5db; background:#f8fafc; border-right:0;">
+                        <i class="bi bi-lock-fill" style="color:#94a3b8;"></i>
+                    </span>
+                    <input type="password"
+                        class="form-control"
+                        id="password_confirmation" name="password_confirmation"
+                        required autocomplete="new-password"
+                        placeholder="••••••••"
+                        style="border-left:0; border-right:0;">
+                    <button class="input-group-text" type="button" onclick="togglePassword('password_confirmation', 'toggle-icon-confirm')"
+                        style="border-color:#d1d5db; background:#f8fafc; cursor:pointer; border-left:0;">
+                        <i class="bi bi-eye-slash" id="toggle-icon-confirm" style="color:#94a3b8;"></i>
+                    </button>
                 </div>
-                @if(Route::has('password.request'))
-                    <a href="{{ route('password.request') }}" style="font-size:.8125rem;">
-                        {{ __('auth.forgot_password') }}?
-                    </a>
-                @endif
             </div>
 
             <button class="btn btn-primary w-100 fw-semibold" type="submit" style="padding:.5625rem;">
-                {{ __('auth.login') }}
+                @lang('auth.reset_password')
             </button>
         </form>
     </div>
@@ -90,9 +90,9 @@
 
 @section('javascript')
 <script>
-    function togglePassword() {
-        const pw   = document.getElementById('password');
-        const icon = document.getElementById('toggle-icon');
+    function togglePassword(fieldId, iconId) {
+        const pw   = document.getElementById(fieldId);
+        const icon = document.getElementById(iconId);
         const show = pw.type === 'password';
         pw.type = show ? 'text' : 'password';
         icon.classList.toggle('bi-eye-slash', !show);

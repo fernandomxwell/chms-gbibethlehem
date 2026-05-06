@@ -21,4 +21,13 @@ return [
 
     'logout' => 'Keluar',
 
+    'forgot_password' => 'Lupa Kata Sandi',
+    'forgot_password_subtitle' => 'Masukkan email Anda untuk menerima tautan reset kata sandi',
+    'send_reset_link' => 'Kirim Tautan Reset',
+    'back_to_login' => 'Kembali ke Halaman Masuk',
+    'reset_password' => 'Reset Kata Sandi',
+    'reset_password_subtitle' => 'Masukkan kata sandi baru Anda',
+    'new_password' => 'Kata Sandi Baru',
+    'confirm_password' => 'Konfirmasi Kata Sandi Baru',
+
 ];

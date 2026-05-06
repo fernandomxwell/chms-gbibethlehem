@@ -4,13 +4,23 @@ use App\Http\Controllers\ActivityController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CongregantController;
 use App\Http\Controllers\CongregantServiceTypeController;
+use App\Http\Controllers\ForgotPasswordController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\ResetPasswordController;
 use App\Http\Controllers\ScheduleController;
 use App\Http\Controllers\ServiceTypesController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('login', [AuthController::class, 'create'])->name('login');
-Route::post('login', [AuthController::class, 'store']);
+Route::middleware(['guest'])->group(function () {
+    Route::get('login', [AuthController::class, 'create'])->name('login');
+    Route::post('login', [AuthController::class, 'store']);
+
+    Route::get('forgot-password', [ForgotPasswordController::class, 'create'])->name('password.request');
+    Route::post('forgot-password', [ForgotPasswordController::class, 'store'])->name('password.email');
+    Route::get('reset-password/{token}', [ResetPasswordController::class, 'create'])->name('password.reset');
+    Route::post('reset-password', [ResetPasswordController::class, 'store'])->name('password.update');
+});
 
 Route::middleware(['auth'])
     ->group(function () {
@@ -43,6 +53,8 @@ Route::middleware(['auth'])
         Route::get('schedules/{schedule}/export', [ScheduleController::class, 'export'])->name('schedules.export');
         Route::delete('schedules/bulk-destroy', [ScheduleController::class, 'bulkDestroy'])->name('schedules.bulk-destroy');
         Route::resource('schedules', ScheduleController::class)->except(['edit', 'update']);
+
+        Route::resource('users', UserController::class)->only(['index', 'create', 'store', 'destroy']);
 
         Route::post('/logout', [AuthController::class, 'destroy'])->name('logout');
 

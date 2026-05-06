@@ -21,4 +21,13 @@ return [
 
     'logout' => 'Logout',
 
+    'forgot_password' => 'Forgot Password',
+    'forgot_password_subtitle' => 'Enter your email to receive password reset link',
+    'send_reset_link' => 'Send Reset Link',
+    'back_to_login' => 'Back to Login',
+    'reset_password' => 'Reset Password',
+    'reset_password_subtitle' => 'Enter your new password',
+    'new_password' => 'New Password',
+    'confirm_password' => 'Confirm New Password',
+
 ];

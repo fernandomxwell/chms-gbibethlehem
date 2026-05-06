@@ -28,9 +28,9 @@ class RunSetupTasks extends Command
         $this->info('🚀 Starting application setup...');
 
         // $this->call('key:generate');
-        $this->call('migrate');
-        $this->call('db:seed');
-        // $this->call('storage:link');
+        // $this->call('migrate'); // Run it manually
+        // $this->call('db:seed'); // Run it manually
+        // $this->call('storage:link'); // Do in dockerfile
 
         $this->createMenus();
 
@@ -50,6 +50,9 @@ class RunSetupTasks extends Command
             'Schedule Management' => [
                 'Congregant Services',
                 'Schedules',
+            ],
+            'Settings' => [
+                'Users',
             ],
         ];
 
