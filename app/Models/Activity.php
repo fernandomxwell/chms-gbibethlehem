@@ -22,6 +22,7 @@ class Activity extends Model
         'description',
         'start_time',
         'rrule',
+        'sort_order',
     ];
 
     /**

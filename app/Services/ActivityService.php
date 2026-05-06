@@ -7,6 +7,7 @@ use App\Http\Requests\StoreActivityRequest;
 use App\Http\Requests\UpdateActivityRequest;
 use App\Models\Activity;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class ActivityService
 {
@@ -20,9 +21,25 @@ class ActivityService
                 'name',
                 'start_time',
                 'rrule',
+                'sort_order',
             ])
+            ->orderBy('sort_order')
             ->paginate()
             ->withQueryString();
+    }
+
+    public function reorder(array $ids): void
+    {
+        $sortOrders = Activity::whereIn('id', $ids)
+            ->orderBy('sort_order')
+            ->pluck('sort_order')
+            ->toArray();
+
+        DB::transaction(function () use ($ids, $sortOrders) {
+            foreach ($ids as $i => $id) {
+                Activity::where('id', $id)->update(['sort_order' => $sortOrders[$i]]);
+            }
+        });
     }
 
     public function create(StoreActivityRequest $request)
@@ -50,6 +67,8 @@ class ActivityService
 
             return $activity;
         }
+
+        $data['sort_order'] = (Activity::max('sort_order') ?? 0) + 1;
 
         return Activity::create($data);
     }
@@ -88,7 +107,7 @@ class ActivityService
     public function getActivitiesForAjax(Request $request)
     {
         return Activity::searchBy($request->all())
-            ->orderBy('name')
+            ->orderBy('sort_order')
             ->select([
                 'id',
                 'name',

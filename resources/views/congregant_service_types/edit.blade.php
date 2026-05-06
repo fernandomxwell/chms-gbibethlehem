@@ -37,8 +37,7 @@
                         @php
                             $allActivities = $serviceTypes
                                 ->flatMap(fn($st) => $st->activities)
-                                ->unique('id')
-                                ->sortBy('name');
+                                ->unique('id');
 
                             $selectedServiceTypes = $congregant->serviceTypesPivot
                                 ->filter(fn($p) => $p->activity_id)

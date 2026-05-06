@@ -28,9 +28,9 @@ class CongregantServiceTypeService
 
         return Congregant::query()
             ->with([
-                'serviceTypes:id,name',
                 'serviceTypesPivot:id,congregant_id,service_type_id,activity_id',
-                'serviceTypesPivot.activity:id,name',
+                'serviceTypesPivot.activity:id,name,sort_order',
+                'serviceTypesPivot.serviceType:id,name,sort_order',
             ])
             ->when($validatedData['search'] ?? null, function (Builder $query) use ($validatedData) {
                 $query->has('serviceTypes')
@@ -98,14 +98,16 @@ class CongregantServiceTypeService
 
             Congregant::with([
                 'serviceTypesPivot:id,congregant_id,service_type_id,activity_id',
-                'serviceTypesPivot.activity:id,name',
-                'serviceTypesPivot.serviceType:id,name',
+                'serviceTypesPivot.activity:id,name,sort_order',
+                'serviceTypesPivot.serviceType:id,name,sort_order',
             ])
                 ->has('serviceTypes')
                 ->orderBy('full_name')
                 ->chunkById(500, function ($congregants) use ($handle) {
                     foreach ($congregants as $congregant) {
-                        foreach ($congregant->serviceTypesPivot as $pivot) {
+                        $pivots = $congregant->serviceTypesPivot
+                            ->sortBy(fn($p) => $p->activity?->sort_order ?? PHP_INT_MAX);
+                        foreach ($pivots as $pivot) {
                             fputcsv($handle, [
                                 $congregant->full_name,
                                 $congregant->can_serve_consecutively ? '1' : '0',

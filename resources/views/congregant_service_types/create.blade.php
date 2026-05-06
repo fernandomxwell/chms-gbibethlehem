@@ -40,8 +40,7 @@
                         @php
                             $allActivities = $serviceTypes
                                 ->flatMap(fn($st) => $st->activities)
-                                ->unique('id')
-                                ->sortBy('name');
+                                ->unique('id');
                         @endphp
 
                         @foreach($allActivities as $activity)

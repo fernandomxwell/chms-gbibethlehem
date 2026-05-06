@@ -58,6 +58,7 @@
                             @php
                                 $activitiesWithServiceTypes = $congregant->serviceTypesPivot
                                     ->filter(fn($p) => $p->activity_id)
+                                    ->sortBy(fn($p) => $p->activity?->sort_order ?? PHP_INT_MAX)
                                     ->groupBy('activity_id');
                             @endphp
                             @if($activitiesWithServiceTypes->isNotEmpty())
@@ -65,7 +66,7 @@
                                     @foreach($activitiesWithServiceTypes as $activityId => $pivots)
                                         @php
                                             $activityName = $pivots->first()->activity?->name;
-                                            $serviceTypes = $pivots->pluck('serviceType.name')->filter();
+                                            $serviceTypes = $pivots->sortBy(fn($p) => $p->serviceType?->sort_order ?? PHP_INT_MAX)->pluck('serviceType.name')->filter();
                                         @endphp
                                         @if($activityName && $serviceTypes->isNotEmpty())
                                             <li><strong>{!! highlightMatch($activityName, request('search')) !!}:</strong>

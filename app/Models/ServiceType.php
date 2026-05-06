@@ -19,6 +19,7 @@ class ServiceType extends Model
     protected $fillable = [
         'name',
         'description',
+        'sort_order',
     ];
 
     /**

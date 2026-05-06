@@ -27,6 +27,7 @@ Route::middleware(['auth'])
         Route::get('/', [HomeController::class, 'index'])->name('home.index');
 
         Route::delete('activities/bulk-destroy', [ActivityController::class, 'bulkDestroy'])->name('activities.bulk-destroy');
+        Route::patch('activities/reorder', [ActivityController::class, 'reorder'])->name('activities.reorder');
         Route::resource('activities', ActivityController::class);
 
         Route::get('congregants/export', [CongregantController::class, 'export'])->name('congregants.export');
@@ -41,6 +42,7 @@ Route::middleware(['auth'])
         Route::get('service_types/import', [ServiceTypesController::class, 'importForm'])->name('service_types.import.form');
         Route::post('service_types/import', [ServiceTypesController::class, 'import'])->name('service_types.import');
         Route::delete('service_types/bulk-destroy', [ServiceTypesController::class, 'bulkDestroy'])->name('service_types.bulk-destroy');
+        Route::patch('service_types/reorder', [ServiceTypesController::class, 'reorder'])->name('service_types.reorder');
         Route::resource('service_types', ServiceTypesController::class);
 
         Route::get('congregant_services/export', [CongregantServiceTypeController::class, 'export'])->name('congregant_services.export');

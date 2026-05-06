@@ -26,7 +26,7 @@ class ServiceTypeService
         $validatedData = $request->validated();
 
         return ServiceType::query()
-            ->with('activities:name')
+            ->with(['activities' => fn($q) => $q->select(['activities.id', 'activities.name'])->orderBy('activities.sort_order')])
             ->when($validatedData['activity'] ?? null, function ($query) use ($validatedData) {
                 $query->whereHas('activities', function ($query) use ($validatedData) {
                     $query->where('activities.id', $validatedData['activity']);
@@ -41,9 +41,25 @@ class ServiceTypeService
             ->select([
                 'id',
                 'name',
+                'sort_order',
             ])
+            ->orderBy('sort_order')
             ->paginate()
             ->withQueryString();
+    }
+
+    public function reorder(array $ids): void
+    {
+        $sortOrders = ServiceType::whereIn('id', $ids)
+            ->orderBy('sort_order')
+            ->pluck('sort_order')
+            ->toArray();
+
+        DB::transaction(function () use ($ids, $sortOrders) {
+            foreach ($ids as $i => $id) {
+                ServiceType::where('id', $id)->update(['sort_order' => $sortOrders[$i]]);
+            }
+        });
     }
 
     public function create(StoreServiceTypeRequest $request)
@@ -64,6 +80,7 @@ class ServiceTypeService
 
                 $serviceType->fill($data)->save();
             } else {
+                $data['sort_order'] = (ServiceType::max('sort_order') ?? 0) + 1;
                 $serviceType = ServiceType::create($data);
             }
 
@@ -108,7 +125,7 @@ class ServiceTypeService
 
     public function getAll($attributes = ['*'], array $relations = [])
     {
-        return ServiceType::select($attributes)->with($relations)->get();
+        return ServiceType::select($attributes)->with($relations)->orderBy('sort_order')->get();
     }
 
     public function exportCsv(): StreamedResponse
@@ -117,8 +134,8 @@ class ServiceTypeService
             $handle = fopen('php://output', 'w');
             fputcsv($handle, self::EXPORT_COLUMNS);
 
-            ServiceType::with('activities:id,name')
-                ->orderBy('name')
+            ServiceType::with(['activities' => fn($q) => $q->select(['activities.id', 'activities.name'])->orderBy('activities.sort_order')])
+                ->orderBy('sort_order')
                 ->chunkById(500, function ($serviceTypes) use ($handle) {
                     foreach ($serviceTypes as $serviceType) {
                         $activities = $serviceType->activities->pluck('name')->implode(';');

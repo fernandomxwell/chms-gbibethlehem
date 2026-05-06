@@ -14,6 +14,12 @@
         </button>
     </div>
 
+    @if(request('search'))
+        <div class="alert alert-info py-2 mb-2">
+            <small><i class="bi bi-info-circle"></i> @lang('activities.reorder_disabled_search')</small>
+        </div>
+    @endif
+
     <form action="{{ route('activities.index') }}" method="GET">
         <div class="row my-1">
             <div class="col-md-6 my-1 offset-md-6">
@@ -28,6 +34,15 @@
         </div>
     </form>
 
+    <div id="reorder-toast" class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999">
+        <div class="toast align-items-center text-bg-success border-0" role="alert" aria-live="assertive">
+            <div class="d-flex">
+                <div class="toast-body" id="reorder-toast-msg">@lang('activities.success_reorder')</div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
     <form id="bulk-form" action="{{ route('activities.bulk-destroy') }}" method="POST">
         @csrf
         @method('DELETE')
@@ -39,6 +54,11 @@
                         <th class="text-nowrap" style="width:40px">
                             <input type="checkbox" id="bulk-select-all" title="@lang('select_all')">
                         </th>
+                        @if(!request('search'))
+                            <th class="text-nowrap text-center" style="width:40px" title="@lang('activities.drag_to_reorder')">
+                                <i class="bi bi-grip-vertical text-muted"></i>
+                            </th>
+                        @endif
                         <th class="text-nowrap">@lang('No')</th>
                         <th class="text-nowrap">@lang('name')</th>
                         <th class="text-nowrap">@lang('start_time')</th>
@@ -46,10 +66,15 @@
                         <th class="text-nowrap">@lang('actions')</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="sortable-tbody">
                     @forelse ($activities as $index => $activity)
-                        <tr>
+                        <tr data-id="{{ $activity->id }}">
                             <td><input type="checkbox" name="ids[]" value="{{ $activity->id }}" class="bulk-checkbox"></td>
+                            @if(!request('search'))
+                                <td class="text-center drag-handle" style="cursor: grab" title="@lang('activities.drag_to_reorder')">
+                                    <i class="bi bi-grip-vertical text-muted"></i>
+                                </td>
+                            @endif
                             <td>{{ paginatedIndex($index + 1, $activities->currentPage(), $activities->perPage()) }}</td>
                             <td>{!! highlightMatch($activity->name, request('search')) !!}</td>
                             <td class="text-nowrap">{{ $activity->start_time }}</td>
@@ -62,7 +87,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="text-center">@lang('no_records_found')</td>
+                            <td colspan="{{ request('search') ? 6 : 7 }}" class="text-center">@lang('no_records_found')</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -98,3 +123,54 @@
 
     @include('layouts.bulk-delete', ['bulkDeleteConfirmText' => __('activities.are_you_sure_bulk')])
 @endsection
+
+@if(!request('search'))
+@section('javascript')
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+    <script>
+        (function () {
+            const tbody = document.getElementById('sortable-tbody');
+            if (!tbody) return;
+
+            const reorderUrl = '{{ route('activities.reorder') }}';
+            const csrfToken = '{{ csrf_token() }}';
+            const toastEl = document.getElementById('reorder-toast');
+            const toastMsg = document.getElementById('reorder-toast-msg');
+            const errorMsg = '@lang('activities.reorder_error')';
+            const successMsg = '@lang('activities.success_reorder')';
+
+            const bsToast = new bootstrap.Toast(toastEl, { delay: 2500 });
+
+            Sortable.create(tbody, {
+                handle: '.drag-handle',
+                animation: 150,
+                ghostClass: 'table-warning',
+                onEnd: function () {
+                    const ids = Array.from(tbody.querySelectorAll('tr[data-id]'))
+                        .map(tr => tr.dataset.id);
+
+                    fetch(reorderUrl, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ ids }),
+                    })
+                    .then(res => {
+                        if (!res.ok) throw new Error();
+                        toastEl.querySelector('.toast').classList.replace('text-bg-danger', 'text-bg-success');
+                        toastMsg.textContent = successMsg;
+                    })
+                    .catch(() => {
+                        toastEl.querySelector('.toast').classList.replace('text-bg-success', 'text-bg-danger');
+                        toastMsg.textContent = errorMsg;
+                    })
+                    .finally(() => bsToast.show());
+                },
+            });
+        })();
+    </script>
+@endsection
+@endif

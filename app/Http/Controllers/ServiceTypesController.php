@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\BulkDestroyRequest;
 use App\Http\Requests\ImportServiceTypeRequest;
 use App\Http\Requests\IndexServiceTypeRequest;
+use App\Http\Requests\ReorderServiceTypeRequest;
 use App\Http\Requests\StoreServiceTypeRequest;
 use App\Http\Requests\UpdateServiceTypeRequest;
 use App\Models\Activity;
@@ -64,7 +65,7 @@ class ServiceTypesController extends Controller implements HasMiddleware
     public function create()
     {
         try {
-            $activities = Activity::orderBy('name')->get(['id', 'name']);
+            $activities = Activity::orderBy('sort_order')->get(['id', 'name']);
 
             return view('service_types.create', [
                 'activities' => $activities,
@@ -95,7 +96,7 @@ class ServiceTypesController extends Controller implements HasMiddleware
     public function show(ServiceType $serviceType)
     {
         try {
-            $serviceType->load('activities');
+            $serviceType->load(['activities' => fn($q) => $q->orderBy('sort_order')]);
 
             return view('service_types.show', [
                 'serviceType' => $serviceType,
@@ -112,7 +113,7 @@ class ServiceTypesController extends Controller implements HasMiddleware
     {
         try {
             $serviceType->load('activities');
-            $activities = Activity::orderBy('name')->get(['id', 'name']);
+            $activities = Activity::orderBy('sort_order')->get(['id', 'name']);
 
             return view('service_types.edit', [
                 'serviceType' => $serviceType,
@@ -150,6 +151,17 @@ class ServiceTypesController extends Controller implements HasMiddleware
                 ->with('success', __('service_types.success_delete'));
         } catch (\Exception $e) {
             return $this->handleException($e, 'service_types.index');
+        }
+    }
+
+    public function reorder(ReorderServiceTypeRequest $request)
+    {
+        try {
+            $this->serviceTypeService->reorder($request->validated('ids'));
+
+            return response()->json(['message' => __('service_types.success_reorder')]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => __('error')], 500);
         }
     }
 

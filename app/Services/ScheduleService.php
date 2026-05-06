@@ -132,6 +132,7 @@ class ScheduleService
 
         $availableServiceTypesIds = $schedules->pluck('service_type_id')->unique();
         $availableServiceTypes = ServiceType::whereIntegerInRaw('id', $availableServiceTypesIds)
+            ->orderBy('sort_order')
             ->get([
                 'id',
                 'name',
@@ -179,6 +180,7 @@ class ScheduleService
 
         $availableServiceTypesIds = $schedules->pluck('service_type_id')->unique();
         $availableServiceTypes = ServiceType::whereIntegerInRaw('id', $availableServiceTypesIds)
+            ->orderBy('sort_order')
             ->get(['id', 'name'])
             ->keyBy('id');
 

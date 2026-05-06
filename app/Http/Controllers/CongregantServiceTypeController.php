@@ -64,8 +64,10 @@ class CongregantServiceTypeController extends Controller implements HasMiddlewar
     public function create()
     {
         try {
-            $activities = Activity::orderBy('name')->get(['id', 'name']);
-            $serviceTypes = ServiceType::with('activities:id,name')->orderBy('name')->get(['id', 'name']);
+            $activities = Activity::orderBy('sort_order')->get(['id', 'name']);
+            $serviceTypes = ServiceType::with(['activities' => fn($q) => $q->select(['activities.id', 'activities.name'])->orderBy('activities.sort_order')])
+                ->orderBy('sort_order')
+                ->get(['id', 'name']);
 
             return view('congregant_service_types.create', [
                 'activities' => $activities,
@@ -109,8 +111,10 @@ class CongregantServiceTypeController extends Controller implements HasMiddlewar
                     'can_serve_consecutively',
                 ]);
 
-            $activities = Activity::orderBy('name')->get(['id', 'name']);
-            $serviceTypes = ServiceType::with('activities:id,name')->orderBy('name')->get(['id', 'name']);
+            $activities = Activity::orderBy('sort_order')->get(['id', 'name']);
+            $serviceTypes = ServiceType::with(['activities' => fn($q) => $q->select(['activities.id', 'activities.name'])->orderBy('activities.sort_order')])
+                ->orderBy('sort_order')
+                ->get(['id', 'name']);
 
             return view('congregant_service_types.edit', [
                 'congregant' => $congregant,

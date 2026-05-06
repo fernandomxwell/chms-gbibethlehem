@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\BulkDestroyRequest;
 use App\Http\Requests\IndexActivityRequest;
+use App\Http\Requests\ReorderActivityRequest;
 use App\Http\Requests\StoreActivityRequest;
 use App\Http\Requests\UpdateActivityRequest;
 use App\Models\Activity;
@@ -155,6 +156,17 @@ class ActivityController extends Controller implements HasMiddleware
                 ->with('success', __('activities.success_delete'));
         } catch (\Exception $e) {
             return $this->handleException($e, 'activities.index');
+        }
+    }
+
+    public function reorder(ReorderActivityRequest $request)
+    {
+        try {
+            $this->activityService->reorder($request->validated('ids'));
+
+            return response()->json(['message' => __('activities.success_reorder')]);
+        } catch (\Exception $e) {
+            return response()->json(['message' => __('error')], 500);
         }
     }
 
