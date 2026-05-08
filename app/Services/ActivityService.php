@@ -6,11 +6,19 @@ use App\Http\Requests\IndexActivityRequest;
 use App\Http\Requests\StoreActivityRequest;
 use App\Http\Requests\UpdateActivityRequest;
 use App\Models\Activity;
+use App\Traits\Services\HasBulkDelete;
+use App\Traits\Services\HasReorder;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class ActivityService
 {
+    use HasBulkDelete, HasReorder;
+
+    protected function getReorderModel(): string
+    {
+        return Activity::class;
+    }
+
     public function getPaginatedActivities(IndexActivityRequest $request)
     {
         $validatedData = $request->validated();
@@ -26,20 +34,6 @@ class ActivityService
             ->orderBy('sort_order')
             ->paginate()
             ->withQueryString();
-    }
-
-    public function reorder(array $ids): void
-    {
-        $sortOrders = Activity::whereIn('id', $ids)
-            ->orderBy('sort_order')
-            ->pluck('sort_order')
-            ->toArray();
-
-        DB::transaction(function () use ($ids, $sortOrders) {
-            foreach ($ids as $i => $id) {
-                Activity::where('id', $id)->update(['sort_order' => $sortOrders[$i]]);
-            }
-        });
     }
 
     public function create(StoreActivityRequest $request)
@@ -95,13 +89,6 @@ class ActivityService
     public function delete(int $id)
     {
         Activity::findOrFail($id, ['id'])->delete();
-    }
-
-    public function bulkDelete(array $ids): void
-    {
-        foreach ($ids as $id) {
-            $this->delete($id);
-        }
     }
 
     public function getActivitiesForAjax(Request $request)

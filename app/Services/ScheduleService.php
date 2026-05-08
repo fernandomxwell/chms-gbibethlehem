@@ -9,11 +9,14 @@ use App\Models\Congregant;
 use App\Models\Schedule;
 use App\Models\ScheduleGroup;
 use App\Models\ServiceType;
+use App\Traits\Services\HasBulkDelete;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class ScheduleService
 {
+    use HasBulkDelete;
+
     public function getPaginatedScheduleGroup(IndexScheduleRequest $request)
     {
         $validatedData = $request->validated();
@@ -231,13 +234,6 @@ class ScheduleService
 
             $scheduleGroup->delete();
         });
-    }
-
-    public function bulkDelete(array $ids): void
-    {
-        foreach ($ids as $id) {
-            $this->delete($id);
-        }
     }
 
     protected function getEligibleCongregants(

@@ -5,21 +5,64 @@ namespace App\Services;
 use App\Http\Requests\IndexServiceTypeRequest;
 use App\Http\Requests\StoreServiceTypeRequest;
 use App\Http\Requests\UpdateServiceTypeRequest;
+use App\Traits\Services\HasBulkDelete;
+use App\Traits\Services\HasCsvImportExport;
+use App\Traits\Services\HasReorder;
 use Illuminate\Validation\Rules\Unique;
 use App\Models\Activity;
 use App\Models\ServiceType;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ServiceTypeService
 {
-    private const EXPORT_COLUMNS = [
-        'name',
-        'description',
-        'activities',
-    ];
+    use HasBulkDelete, HasCsvImportExport, HasReorder;
+
+    protected function getReorderModel(): string
+    {
+        return ServiceType::class;
+    }
+
+    protected function getExportColumns(): array
+    {
+        return [
+            'name',
+            'description',
+            'activities',
+        ];
+    }
+
+    protected function getExportFilename(): string
+    {
+        return 'jenis_pelayanan_' . now()->format('Y-m-d') . '.csv';
+    }
+
+    protected function getTemplateFilename(): string
+    {
+        return 'template_jenis_pelayanan.csv';
+    }
+
+    protected function getTemplateRows(): array
+    {
+        return [['Worship Leader', 'Memimpin pujian', 'Ibadah Minggu;Ibadah Pemuda']];
+    }
+
+    protected function writeExportRows($handle): void
+    {
+        ServiceType::with(['activities' => fn($q) => $q->select(['activities.id', 'activities.name'])->orderBy('activities.sort_order')])
+            ->orderBy('sort_order')
+            ->chunkById(500, function ($serviceTypes) use ($handle) {
+                foreach ($serviceTypes as $serviceType) {
+                    $activities = $serviceType->activities->pluck('name')->implode(';');
+                    fputcsv($handle, [
+                        $serviceType->name,
+                        $serviceType->description ?? '',
+                        $activities,
+                    ]);
+                }
+            });
+    }
 
     public function getPaginatedServiceTypes(IndexServiceTypeRequest $request)
     {
@@ -46,20 +89,6 @@ class ServiceTypeService
             ->orderBy('sort_order')
             ->paginate()
             ->withQueryString();
-    }
-
-    public function reorder(array $ids): void
-    {
-        $sortOrders = ServiceType::whereIn('id', $ids)
-            ->orderBy('sort_order')
-            ->pluck('sort_order')
-            ->toArray();
-
-        DB::transaction(function () use ($ids, $sortOrders) {
-            foreach ($ids as $i => $id) {
-                ServiceType::where('id', $id)->update(['sort_order' => $sortOrders[$i]]);
-            }
-        });
     }
 
     public function create(StoreServiceTypeRequest $request)
@@ -116,70 +145,16 @@ class ServiceTypeService
         });
     }
 
-    public function bulkDelete(array $ids): void
-    {
-        foreach ($ids as $id) {
-            $this->delete($id);
-        }
-    }
-
     public function getAll($attributes = ['*'], array $relations = [])
     {
         return ServiceType::select($attributes)->with($relations)->orderBy('sort_order')->get();
     }
 
-    public function exportCsv(): StreamedResponse
-    {
-        return response()->streamDownload(function () {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, self::EXPORT_COLUMNS);
-
-            ServiceType::with(['activities' => fn($q) => $q->select(['activities.id', 'activities.name'])->orderBy('activities.sort_order')])
-                ->orderBy('sort_order')
-                ->chunkById(500, function ($serviceTypes) use ($handle) {
-                    foreach ($serviceTypes as $serviceType) {
-                        $activities = $serviceType->activities->pluck('name')->implode(';');
-                        fputcsv($handle, [
-                            $serviceType->name,
-                            $serviceType->description ?? '',
-                            $activities,
-                        ]);
-                    }
-                });
-
-            fclose($handle);
-        }, 'jenis_pelayanan_' . now()->format('Y-m-d') . '.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
-    }
-
-    public function downloadTemplate(): StreamedResponse
-    {
-        return response()->streamDownload(function () {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, self::EXPORT_COLUMNS);
-            fputcsv($handle, ['Worship Leader', 'Memimpin pujian', 'Ibadah Minggu;Ibadah Pemuda']);
-            fclose($handle);
-        }, 'template_jenis_pelayanan.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
-    }
-
     public function importCsv(UploadedFile $file): array
     {
-        $handle = fopen($file->getRealPath(), 'r');
-        $headers = fgetcsv($handle);
-
-        if (! $headers) {
-            fclose($handle);
-
-            return ['imported' => 0, 'failed' => 0, 'errors' => [__('service_types.import_empty_file')]];
-        }
-
-        if (array_map('trim', $headers) !== self::EXPORT_COLUMNS) {
-            fclose($handle);
-
-            return ['imported' => 0, 'failed' => 0, 'errors' => [__('service_types.import_invalid_headers')]];
+        [$handle, $earlyReturn] = $this->openValidatedCsvImport($file, 'service_types');
+        if ($earlyReturn !== null) {
+            return $earlyReturn;
         }
 
         $storeRules = (new StoreServiceTypeRequest())->rules();
@@ -197,7 +172,7 @@ class ServiceTypeService
         while (($values = fgetcsv($handle)) !== false) {
             $row++;
 
-            if (count($values) !== 3) {
+            if (count($values) !== count($this->getExportColumns())) {
                 $errors[] = __('service_types.import_row_column_mismatch', ['row' => $row]);
                 $failed++;
                 continue;

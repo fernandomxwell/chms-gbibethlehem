@@ -8,19 +8,69 @@ use App\Http\Requests\UpdateCongregantServiceTypeRequest;
 use App\Models\Activity;
 use App\Models\Congregant;
 use App\Models\ServiceType;
+use App\Traits\Services\HasBulkDelete;
+use App\Traits\Services\HasCsvImportExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CongregantServiceTypeService
 {
-    private const EXPORT_COLUMNS = [
-        'full_name',
-        'can_serve_consecutively',
-        'activity',
-        'service_type'
-    ];
+    use HasBulkDelete, HasCsvImportExport;
+
+    protected function getExportColumns(): array
+    {
+        return [
+            'full_name',
+            'can_serve_consecutively',
+            'activity',
+            'service_type',
+        ];
+    }
+
+    protected function getExportFilename(): string
+    {
+        return 'pelayanan_jemaat_' . now()->format('Y-m-d') . '.csv';
+    }
+
+    protected function getTemplateFilename(): string
+    {
+        return 'template_pelayanan_jemaat.csv';
+    }
+
+    protected function getTemplateRows(): array
+    {
+        return [
+            ['Budi Santoso', '1', 'Ibadah Minggu', 'Worship Leader'],
+            ['Budi Santoso', '1', 'Ibadah Minggu', 'Pianist'],
+            ['Sari Dewi', '0', 'Ibadah Pemuda', 'Singer'],
+        ];
+    }
+
+    protected function writeExportRows($handle): void
+    {
+        Congregant::with([
+            'serviceTypesPivot:id,congregant_id,service_type_id,activity_id',
+            'serviceTypesPivot.activity:id,name,sort_order',
+            'serviceTypesPivot.serviceType:id,name,sort_order',
+        ])
+            ->has('serviceTypes')
+            ->orderBy('full_name')
+            ->chunkById(500, function ($congregants) use ($handle) {
+                foreach ($congregants as $congregant) {
+                    $pivots = $congregant->serviceTypesPivot
+                        ->sortBy(fn($p) => $p->activity?->sort_order ?? PHP_INT_MAX);
+                    foreach ($pivots as $pivot) {
+                        fputcsv($handle, [
+                            $congregant->full_name,
+                            $congregant->can_serve_consecutively ? '1' : '0',
+                            $pivot->activity?->name ?? '',
+                            $pivot->serviceType?->name ?? '',
+                        ]);
+                    }
+                }
+            });
+    }
 
     public function index(IndexCongregantServiceTypeRequest $request)
     {
@@ -83,76 +133,11 @@ class CongregantServiceTypeService
         $congregant->serviceTypes()->detach();
     }
 
-    public function bulkDelete(array $ids): void
-    {
-        foreach ($ids as $id) {
-            $this->delete($id);
-        }
-    }
-
-    public function exportCsv(): StreamedResponse
-    {
-        return response()->streamDownload(function () {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, self::EXPORT_COLUMNS);
-
-            Congregant::with([
-                'serviceTypesPivot:id,congregant_id,service_type_id,activity_id',
-                'serviceTypesPivot.activity:id,name,sort_order',
-                'serviceTypesPivot.serviceType:id,name,sort_order',
-            ])
-                ->has('serviceTypes')
-                ->orderBy('full_name')
-                ->chunkById(500, function ($congregants) use ($handle) {
-                    foreach ($congregants as $congregant) {
-                        $pivots = $congregant->serviceTypesPivot
-                            ->sortBy(fn($p) => $p->activity?->sort_order ?? PHP_INT_MAX);
-                        foreach ($pivots as $pivot) {
-                            fputcsv($handle, [
-                                $congregant->full_name,
-                                $congregant->can_serve_consecutively ? '1' : '0',
-                                $pivot->activity?->name ?? '',
-                                $pivot->serviceType?->name ?? '',
-                            ]);
-                        }
-                    }
-                });
-
-            fclose($handle);
-        }, 'pelayanan_jemaat_' . now()->format('Y-m-d') . '.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
-    }
-
-    public function downloadTemplate(): StreamedResponse
-    {
-        return response()->streamDownload(function () {
-            $handle = fopen('php://output', 'w');
-            fputcsv($handle, self::EXPORT_COLUMNS);
-            fputcsv($handle, ['Budi Santoso', '1', 'Ibadah Minggu', 'Worship Leader']);
-            fputcsv($handle, ['Budi Santoso', '1', 'Ibadah Minggu', 'Pianist']);
-            fputcsv($handle, ['Sari Dewi', '0', 'Ibadah Pemuda', 'Singer']);
-            fclose($handle);
-        }, 'template_pelayanan_jemaat.csv', [
-            'Content-Type' => 'text/csv',
-        ]);
-    }
-
     public function importCsv(UploadedFile $file): array
     {
-        $handle = fopen($file->getRealPath(), 'r');
-        $headers = fgetcsv($handle);
-
-        if (! $headers) {
-            fclose($handle);
-
-            return ['imported' => 0, 'failed' => 0, 'errors' => [__('congregant_services.import_empty_file')]];
-        }
-
-        if (array_map('trim', $headers) !== self::EXPORT_COLUMNS) {
-            fclose($handle);
-
-            return ['imported' => 0, 'failed' => 0, 'errors' => [__('congregant_services.import_invalid_headers')]];
+        [$handle, $earlyReturn] = $this->openValidatedCsvImport($file, 'congregant_services');
+        if ($earlyReturn !== null) {
+            return $earlyReturn;
         }
 
         // Parse all rows first, grouped by full_name
@@ -163,7 +148,7 @@ class CongregantServiceTypeService
         while (($values = fgetcsv($handle)) !== false) {
             $row++;
 
-            if (count($values) !== 4) {
+            if (count($values) !== count($this->getExportColumns())) {
                 $parseErrors[] = __('congregant_services.import_row_column_mismatch', ['row' => $row]);
                 continue;
             }
